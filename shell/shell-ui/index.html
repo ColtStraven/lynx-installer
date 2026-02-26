@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lynx Installer</title>
+    <link rel="icon" type="image/png" href="/lynx-logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+
+      <!-- ── SCREEN: SPLASH ─────────────────────────── -->
+      <div id="screen-splash" class="screen active">
+        <div class="splash-bg">
+          <div class="bg-orb orb-1"></div>
+          <div class="bg-orb orb-2"></div>
+          <div class="bg-orb orb-3"></div>
+          <div class="grid-overlay"></div>
+        </div>
+        <div class="splash-content">
+          <div class="lynx-logo" id="splash-logo">
+            <img src="/lynx-logo.png" alt="Lynx" />
+          </div>
+          <div class="splash-text">
+            <div class="splash-label">INSTALLER</div>
+            <h1 class="splash-appname" id="splash-appname">My Awesome App</h1>
+            <div class="splash-version" id="splash-version">v2.1.0 · by Acme Corp</div>
+          </div>
+          <div class="splash-loader">
+            <div class="loader-track">
+              <div class="loader-fill"></div>
+            </div>
+            <div class="loader-text">Initializing...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SCREEN: INSTALL ────────────────────────── -->
+      <div id="screen-install" class="screen">
+        <div class="install-bg">
+          <div class="bg-orb orb-1"></div>
+          <div class="bg-orb orb-2"></div>
+          <div class="grid-overlay"></div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <div class="sidebar-logo">
+            <img src="/lynx-logo.png" alt="Lynx" />
+          </div>
+          <div class="sidebar-info">
+            <div class="sidebar-appname" id="install-appname">My Awesome App</div>
+            <div class="sidebar-version" id="install-version">v2.1.0</div>
+            <div class="sidebar-publisher" id="install-publisher">by Acme Corp</div>
+          </div>
+          <div class="sidebar-steps">
+            <div class="step-item active" data-step="0">
+              <div class="step-dot"></div>
+              <span>Prepare</span>
+            </div>
+            <div class="step-item" data-step="1">
+              <div class="step-dot"></div>
+              <span>Install</span>
+            </div>
+            <div class="step-item" data-step="2">
+              <div class="step-dot"></div>
+              <span>Finish</span>
+            </div>
+          </div>
+          <div class="sidebar-powered">
+            <span>powered by</span>
+            <strong>Lynx Installer</strong>
+          </div>
+        </div>
+
+        <!-- Main panel -->
+        <div class="install-panel">
+
+          <!-- Window controls (frameless) -->
+          <div class="window-controls">
+            <button class="wc-btn wc-minimize" id="btn-minimize" title="Minimize">
+              <svg width="10" height="2" viewBox="0 0 10 2"><rect width="10" height="2" rx="1" fill="currentColor"/></svg>
+            </button>
+            <button class="wc-btn wc-close" id="btn-close" title="Cancel">
+              <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+
+          <!-- Step 0: Directory picker -->
+          <div class="panel-step" id="panel-step-0">
+            <div class="panel-header">
+              <div class="panel-tag">READY TO INSTALL</div>
+              <h2>Choose install location</h2>
+              <p class="panel-desc" id="panel-desc">
+                Select where you'd like to install <strong id="panel-appname-2">My Awesome App</strong>.
+                It requires approximately <strong>250 MB</strong> of disk space.
+              </p>
+            </div>
+            <div class="dir-picker">
+              <input type="text" id="install-dir-input" class="dir-input" value="C:\Program Files\MyAwesomeApp" readonly />
+              <button class="dir-browse-btn" id="btn-browse">Browse</button>
+            </div>
+            <div class="panel-actions">
+              <button class="btn-install" id="btn-start-install">
+                <span>Install Now</span>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Step 1: Progress -->
+          <div class="panel-step hidden" id="panel-step-1">
+            <div class="panel-header">
+              <div class="panel-tag">INSTALLING</div>
+              <h2 id="progress-step-label">Preparing installation...</h2>
+            </div>
+            <div class="progress-area">
+              <div class="progress-track">
+                <div class="progress-fill" id="progress-fill"></div>
+                <div class="progress-glow" id="progress-glow"></div>
+              </div>
+              <div class="progress-meta">
+                <span class="progress-pct" id="progress-pct">0%</span>
+                <span class="progress-file" id="progress-file">Starting...</span>
+              </div>
+            </div>
+            <div class="step-indicators">
+              <div class="step-chip active" id="chip-0">Prepare</div>
+              <div class="step-chip" id="chip-1">Files</div>
+              <div class="step-chip" id="chip-2">Shortcuts</div>
+            </div>
+          </div>
+
+          <!-- Step 2: Complete -->
+          <div class="panel-step hidden" id="panel-step-2">
+            <div class="panel-header">
+              <div class="panel-tag success">COMPLETE</div>
+              <h2>Installation successful!</h2>
+              <p class="panel-desc">
+                <strong id="complete-appname">My Awesome App</strong> has been installed to
+                <span class="install-path" id="complete-path">C:\Program Files\MyAwesomeApp</span>
+              </p>
+            </div>
+            <div class="complete-icon">
+              <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+                <circle cx="28" cy="28" r="26" stroke="url(#grad)" stroke-width="2"/>
+                <path d="M17 28l8 8 14-16" stroke="url(#grad2)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <defs>
+                  <linearGradient id="grad" x1="2" y1="2" x2="54" y2="54" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#FF6B35"/>
+                    <stop offset="1" stop-color="#C850C0"/>
+                  </linearGradient>
+                  <linearGradient id="grad2" x1="17" y1="20" x2="39" y2="36" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#FF6B35"/>
+                    <stop offset="1" stop-color="#C850C0"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <div class="panel-actions complete-actions">
+              <label class="launch-check">
+                <input type="checkbox" id="chk-launch" checked />
+                <span>Launch after closing</span>
+              </label>
+              <button class="btn-install btn-finish" id="btn-finish">
+                <span>Finish</span>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

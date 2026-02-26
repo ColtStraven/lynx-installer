@@ -1,0 +1,633 @@
+/* ═══════════════════════════════════════════════
+   Lynx Installer — Default Theme
+   Dark geometric · Orange/Magenta gradient
+   ═══════════════════════════════════════════════ */
+
+/* ── Reset & base ──────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --accent:       #FF6B35;
+  --accent-2:     #C850C0;
+  --accent-3:     #4158D0;
+  --bg:           #0E0E1A;
+  --bg-2:         #13131F;
+  --bg-card:      #1A1A2E;
+  --border:       rgba(255,255,255,0.07);
+  --text:         #F0F0F5;
+  --text-muted:   rgba(240,240,245,0.45);
+  --text-dim:     rgba(240,240,245,0.25);
+  --success:      #3DDC84;
+  --radius:       12px;
+  --radius-sm:    6px;
+
+  --grad: linear-gradient(135deg, var(--accent), var(--accent-2));
+  --grad-3: linear-gradient(135deg, var(--accent-3), var(--accent-2), var(--accent));
+}
+
+html, body {
+  width: 720px;
+  height: 500px;
+  overflow: hidden;
+  background: transparent;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+#app {
+  width: 720px;
+  height: 500px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--bg);
+  box-shadow:
+    0 32px 80px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(255,255,255,0.06);
+}
+
+/* ── Screens ───────────────────────────────────── */
+.screen {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.screen.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ── Background orbs ───────────────────────────── */
+.bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.orb-1 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(255,107,53,0.15) 0%, transparent 70%);
+  top: -150px; right: -100px;
+}
+.orb-2 {
+  width: 350px; height: 350px;
+  background: radial-gradient(circle, rgba(200,80,192,0.12) 0%, transparent 70%);
+  bottom: -100px; left: -80px;
+}
+.orb-3 {
+  width: 250px; height: 250px;
+  background: radial-gradient(circle, rgba(65,88,208,0.1) 0%, transparent 70%);
+  top: 50%; left: 40%;
+  transform: translate(-50%, -50%);
+}
+
+.grid-overlay {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* ════════════════════════════════════════════════
+   SPLASH SCREEN
+   ════════════════════════════════════════════════ */
+#screen-splash {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+}
+
+.splash-bg { position: absolute; inset: 0; }
+
+.splash-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  text-align: center;
+}
+
+.lynx-logo {
+  width: 90px;
+  height: 90px;
+  animation: logo-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.lynx-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 24px rgba(255,107,53,0.4));
+}
+
+@keyframes logo-pop {
+  from { opacity: 0; transform: scale(0.6) rotate(-8deg); }
+  to   { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+.splash-text {
+  animation: fade-up 0.5s ease 0.3s both;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.splash-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.splash-appname {
+  font-family: 'Syne', sans-serif;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: var(--grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+}
+
+.splash-version {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.splash-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  animation: fade-up 0.5s ease 0.5s both;
+}
+
+.loader-track {
+  width: 200px;
+  height: 3px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.loader-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--grad);
+  border-radius: 99px;
+  animation: loader-run 1.6s ease 0.6s forwards;
+}
+
+@keyframes loader-run {
+  0%   { width: 0%; }
+  60%  { width: 80%; }
+  100% { width: 100%; }
+}
+
+.loader-text {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+/* ════════════════════════════════════════════════
+   INSTALL SCREEN
+   ════════════════════════════════════════════════ */
+#screen-install {
+  display: flex;
+  background: var(--bg);
+}
+
+.install-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ── Sidebar ───────────────────────────────────── */
+.sidebar {
+  position: relative;
+  z-index: 1;
+  width: 200px;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.025);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 28px 20px;
+  gap: 0;
+}
+
+.sidebar-logo {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 20px;
+}
+
+.sidebar-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(255,107,53,0.35));
+}
+
+.sidebar-info {
+  margin-bottom: 32px;
+}
+
+.sidebar-appname {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.sidebar-version {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.sidebar-publisher {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.sidebar-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.step-item.active {
+  color: var(--text);
+  background: rgba(255,107,53,0.08);
+}
+
+.step-item.done {
+  color: var(--text-muted);
+}
+
+.step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.step-item.active .step-dot {
+  background: var(--grad);
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(255,107,53,0.6);
+}
+
+.step-item.done .step-dot {
+  background: var(--success);
+}
+
+.sidebar-powered {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.03em;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.sidebar-powered strong {
+  display: block;
+  color: var(--text-muted);
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+/* ── Main install panel ─────────────────────────── */
+.install-panel {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 32px 28px;
+}
+
+.window-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+
+.wc-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wc-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+.wc-close:hover { background: rgba(255,80,80,0.2); color: #ff5050; border-color: rgba(255,80,80,0.3); }
+
+/* ── Panel steps ───────────────────────────────── */
+.panel-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.panel-step.hidden {
+  display: none;
+}
+
+.panel-tag {
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+
+.panel-tag.success { color: var(--success); }
+
+.panel-header h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 10px;
+  line-height: 1.2;
+}
+
+.panel-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 360px;
+  line-height: 1.6;
+}
+
+.panel-desc strong { color: var(--text); font-weight: 500; }
+
+/* ── Dir picker ─────────────────────────────────── */
+.dir-picker {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+  margin-bottom: 28px;
+}
+
+.dir-input {
+  flex: 1;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  outline: none;
+  cursor: default;
+  transition: border-color 0.2s;
+}
+
+.dir-input:focus { border-color: rgba(255,107,53,0.4); }
+
+.dir-browse-btn {
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.dir-browse-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: var(--text);
+}
+
+/* ── Install button ─────────────────────────────── */
+.panel-actions { display: flex; align-items: center; }
+
+.btn-install {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: var(--grad);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 20px rgba(255,107,53,0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-install::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0);
+  transition: background 0.15s ease;
+}
+
+.btn-install:hover::before { background: rgba(255,255,255,0.1); }
+.btn-install:active { transform: scale(0.98); }
+
+/* ── Progress ───────────────────────────────────── */
+.progress-area {
+  margin-top: 28px;
+  margin-bottom: 24px;
+}
+
+.progress-track {
+  position: relative;
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 99px;
+  overflow: visible;
+  margin-bottom: 12px;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--grad);
+  border-radius: 99px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.progress-glow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 20px;
+  background: rgba(255,107,53,0.6);
+  border-radius: 50%;
+  filter: blur(10px);
+  pointer-events: none;
+  transition: left 0.3s ease;
+  left: 0%;
+}
+
+.progress-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.progress-pct {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.progress-file {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: monospace;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.step-indicators {
+  display: flex;
+  gap: 8px;
+}
+
+.step-chip {
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  transition: all 0.2s ease;
+}
+
+.step-chip.active {
+  background: rgba(255,107,53,0.12);
+  border-color: rgba(255,107,53,0.3);
+  color: var(--accent);
+}
+
+.step-chip.done {
+  background: rgba(61,220,132,0.08);
+  border-color: rgba(61,220,132,0.2);
+  color: var(--success);
+}
+
+/* ── Complete screen ────────────────────────────── */
+.complete-icon {
+  margin: 20px 0 24px;
+  animation: check-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes check-pop {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.install-path {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--accent);
+  background: rgba(255,107,53,0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.complete-actions {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.launch-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.launch-check input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.btn-finish { background: var(--grad-3); }

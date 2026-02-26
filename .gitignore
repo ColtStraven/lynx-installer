@@ -1,0 +1,21 @@
+# Rust / Cargo
+target/
+**/*.rs.bk
+
+# Node / Vite
+**/node_modules/
+**/dist/
+**/.vite/
+
+# Tauri generated
+shell/src-tauri/gen/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.user

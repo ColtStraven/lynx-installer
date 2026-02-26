@@ -1,0 +1,57 @@
+[workspace]
+resolver = "3"
+
+members = [
+    "engine",
+    "shell/src-tauri",  # Step A — installer UI shell
+    # "builder/src-tauri",  # uncomment when we add Step B
+]
+
+# ─────────────────────────────────────────────
+# Shared dependency versions across all crates
+# Keeps versions in sync — each crate still declares
+# its own [dependencies] but can inherit these with
+# { workspace = true }
+# ─────────────────────────────────────────────
+[workspace.dependencies]
+# Serialization
+serde       = { version = "1", features = ["derive"] }
+serde_json  = "1"
+toml        = "0.9.8"
+
+# Error handling
+thiserror   = "2.0.18"
+anyhow      = "1"
+
+# Compression
+zstd        = "0.13"
+tar         = "0.4"
+
+# Filesystem
+walkdir     = "2"
+tempfile    = "3"
+dirs        = "6.0.0"
+
+# Logging
+tracing             = "0.1"
+tracing-subscriber  = { version = "0.3", features = ["env-filter"] }
+
+# Async (shell + builder will need this)
+tokio       = { version = "1", features = ["full"] }
+
+# IPC (shell <-> engine communication)
+interprocess = "2"
+
+# Tauri
+tauri       = { version = "2.10.0" }
+tauri-build = { version = "2.5.4" }
+
+[profile.release]
+opt-level     = 3
+lto           = true
+codegen-units = 1
+strip         = true    # strip debug symbols → smaller installer binaries
+
+[profile.dev]
+opt-level = 0
+debug     = true
