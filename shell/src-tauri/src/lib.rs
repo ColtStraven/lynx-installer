@@ -3,6 +3,10 @@
 
 use tauri::{AppHandle, Emitter, Manager};
 
+// Embed the .lynxpak bundle at compile time
+// In production the builder replaces this path with the real payload
+static EMBEDDED_PAK: &[u8] = include_bytes!("../../../test-payload/test.lynxpak");
+
 // ─────────────────────────────────────────────
 //  Embedded project config
 // ─────────────────────────────────────────────
@@ -15,6 +19,7 @@ fn embedded_project_toml() -> String {
         "publisher = \"Acme Corp\"",
         "id = \"com.acme.myawesomeapp\"",
         "description = \"The most awesome app ever made.\"",
+        "default_install_dir = \"{local_app_data}/MyAwesomeApp\"",
         "",
         "[theme]",
         "name = \"lynx-default\"",
@@ -81,6 +86,10 @@ async fn start_install(app: AppHandle, install_dir: String) -> Result<(), String
     let app_clone = app.clone();
 
     tauri::async_runtime::spawn_blocking(move || {
+        // Debug: confirm pak is loaded and install dir is correct
+        log::info!("PAK size: {} bytes", EMBEDDED_PAK.len());
+        log::info!("Install dir: {}", install_dir);
+
         let toml = embedded_project_toml();
         let project = match lynx_engine::LynxProject::from_toml_str(&toml) {
             Ok(p) => p,
@@ -103,7 +112,8 @@ async fn start_install(app: AppHandle, install_dir: String) -> Result<(), String
             let _ = app_for_sender.emit("progress", value);
         });
 
-        let config = lynx_engine::RunnerConfig::new(&install_dir);
+        let config = lynx_engine::RunnerConfig::new(&install_dir)
+            .with_pak_bytes(EMBEDDED_PAK.to_vec());
         let runner = lynx_engine::InstallerRunner::new(&project, config, &sender);
 
         if let Err(e) = runner.run() {

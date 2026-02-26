@@ -1,0 +1,21 @@
+[app]
+name = "Test App"
+version = "1.0.0"
+publisher = "Lynx Test"
+id = "com.lynx.testapp"
+description = "A test payload to verify the bundle/extract pipeline."
+default_install_dir = "{temp}/LynxTestApp"
+
+[theme]
+name = "lynx-default"
+path = "themes/lynx-default"
+accent_color = "#FF6B35"
+
+[[files]]
+source = "files/"
+destination = "{install_dir}"
+recursive = true
+
+[[steps]]
+kind = "extract"
+label = "Installing test files..."
