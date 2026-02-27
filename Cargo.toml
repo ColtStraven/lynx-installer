@@ -3,8 +3,8 @@ resolver = "3"
 
 members = [
     "engine",
-    "shell/src-tauri",  # Step A — installer UI shell
-    # "builder/src-tauri",  # uncomment when we add Step B
+    "shell/src-tauri",    # Step A — installer UI shell
+    "builder/src-tauri",  # Step B — builder app
 ]
 
 # ─────────────────────────────────────────────

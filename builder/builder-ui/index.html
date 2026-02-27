@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/lynx-logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lynx Builder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { width: 100%; height: 100%; overflow: hidden; background: #0C0C14; }
+
+      #splash {
+        position: fixed;
+        inset: 0;
+        background: #0C0C14;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        z-index: 9999;
+        transition: opacity 0.3s ease;
+      }
+
+      #splash.fade-out { opacity: 0; pointer-events: none; }
+
+      #splash img {
+        width: 72px;
+        height: 72px;
+        object-fit: contain;
+        filter: drop-shadow(0 0 24px rgba(255,107,53,0.5));
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { filter: drop-shadow(0 0 16px rgba(255,107,53,0.4)); }
+        50%       { filter: drop-shadow(0 0 32px rgba(255,107,53,0.7)); }
+      }
+
+      #splash h1 {
+        font-family: 'Syne', sans-serif;
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        background: linear-gradient(135deg, #FF6B35, #C850C0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      #splash-sub {
+        font-family: 'Syne', sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        color: rgba(232,232,240,0.3);
+        text-transform: uppercase;
+        margin-top: -16px;
+      }
+
+      #splash-track {
+        width: 160px;
+        height: 2px;
+        background: rgba(255,255,255,0.06);
+        border-radius: 99px;
+        overflow: hidden;
+      }
+
+      #splash-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #FF6B35, #C850C0);
+        border-radius: 99px;
+        animation: loading 3s ease forwards;
+      }
+
+      @keyframes loading {
+        0%  { width: 0%; }
+        40% { width: 55%; }
+        70% { width: 78%; }
+        90% { width: 88%; }
+        100%{ width: 95%; }
+      }
+
+      #splash-status {
+        font-size: 11px;
+        color: rgba(232,232,240,0.2);
+        font-family: monospace;
+        letter-spacing: 0.04em;
+      }
+
+      #splash::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+      }
+
+      #root { width: 100%; height: 100%; }
+    </style>
+  </head>
+  <body>
+    <div id="splash">
+      <img src="/lynx-logo.png" alt="Lynx" />
+      <h1>Lynx Builder</h1>
+      <div id="splash-sub">Project Editor</div>
+      <div>
+        <div id="splash-track"><div id="splash-fill"></div></div>
+      </div>
+      <div id="splash-status">Starting up...</div>
+    </div>
+
+    <div id="root"></div>
+
+    <script>
+      var messages = ['Starting up...', 'Loading engine...', 'Preparing workspace...', 'Almost ready...']
+      var i = 0
+      var statusEl = document.getElementById('splash-status')
+      var interval = setInterval(function() {
+        i = (i + 1) % messages.length
+        if (statusEl) statusEl.textContent = messages[i]
+      }, 800)
+
+      window.__dismissSplash = function() {
+        clearInterval(interval)
+        var splash = document.getElementById('splash')
+        if (splash) {
+          splash.classList.add('fade-out')
+          setTimeout(function() { if (splash.parentNode) splash.parentNode.removeChild(splash) }, 350)
+        }
+      }
+    </script>
+
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
