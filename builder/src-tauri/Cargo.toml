@@ -30,5 +30,8 @@ tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-shell = "2"
 
+# Async
+tokio = { workspace = true }
+
 # Logging
 log = "0.4"

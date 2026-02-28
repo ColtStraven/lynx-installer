@@ -7,12 +7,14 @@ interface Props {
   projectPath: string | null
   isDirty: boolean
   onNew: () => void
+  onOpen: () => void
   onSave: () => void
+  onSaveAs: () => void
 }
 
 const SPLASH_MIN_MS = 2200
 
-export default function Titlebar({ projectName, projectPath, isDirty, onNew, onSave }: Props) {
+export default function Titlebar({ projectName, projectPath, isDirty, onNew, onOpen, onSave, onSaveAs }: Props) {
   useEffect(() => {
     const startTime = Date.now()
     const dismiss = () => {
@@ -42,7 +44,11 @@ export default function Titlebar({ projectName, projectPath, isDirty, onNew, onS
       </div>
       <div className="titlebar-actions">
         <button className="tb-btn" onClick={onNew}>New</button>
-        <button className="tb-btn tb-btn-save" onClick={onSave} disabled={!projectPath}>Save</button>
+        <button className="tb-btn" onClick={onOpen}>Open</button>
+        <button className="tb-btn tb-btn-save" onClick={onSave}>
+          {isDirty ? 'Save●' : 'Save'}
+        </button>
+        <button className="tb-btn" onClick={onSaveAs}>Save As</button>
         <div className="wc-group">
           <button className="wc-btn" onClick={() => invoke('shell_minimize')} title="Minimize">
             <svg width="10" height="2" viewBox="0 0 10 2"><rect width="10" height="2" rx="1" fill="currentColor"/></svg>

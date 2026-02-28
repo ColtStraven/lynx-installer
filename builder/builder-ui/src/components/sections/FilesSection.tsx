@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { pickDirectory } from '../../dialogs'
 import type { LynxProject, FileEntry } from '../../App'
 
 interface Props {
@@ -91,14 +92,21 @@ export default function FilesSection({ project, onChange }: Props) {
             <div className="card-title">{editing === -1 ? 'New File Entry' : 'Edit File Entry'}</div>
             <div className="field">
               <label>Source Path</label>
-              <input
-                type="text"
-                value={draft.source}
-                onChange={e => setDraft(d => ({ ...d, source: e.target.value }))}
-                placeholder="dist/ or path/to/myapp.exe"
-                autoFocus
-              />
-              <div className="token-hint">Relative to the .lynx project file</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="text"
+                  value={draft.source}
+                  onChange={e => setDraft(d => ({ ...d, source: e.target.value }))}
+                  placeholder="dist/ or path/to/myapp.exe"
+                  autoFocus
+                  style={{ flex: 1 }}
+                />
+                <button className="btn btn-sm" onClick={async () => {
+                  const path = await pickDirectory()
+                  if (path) setDraft(d => ({ ...d, source: path }))
+                }}>Browse</button>
+              </div>
+              <div className="token-hint">Relative to the .lynx project file, or absolute path</div>
             </div>
             <div className="field">
               <label>Destination</label>

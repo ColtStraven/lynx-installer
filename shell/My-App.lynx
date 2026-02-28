@@ -1,0 +1,46 @@
+prerequisites = []
+
+[app]
+name = "My App"
+version = "1.0.0"
+publisher = ""
+id = "com.example.myapp"
+default_install_dir = "{program_files}/{app_name}"
+description = ""
+
+[theme]
+name = "lynx-default"
+path = "themes/lynx-default"
+accent_color = "#FF6B35"
+background_color = "#1A1A2E"
+
+[theme.custom_vars]
+
+[[files]]
+source = 'C:\Users\chadp\Projects\lynx-installer\test-payload\files'
+destination = "{install_dir}"
+recursive = true
+overwrite = true
+
+[[steps]]
+kind = "extract"
+label = "Installing application files..."
+
+[[steps]]
+kind = "shortcut"
+label = "Creating shortcuts..."
+target = "{install_dir}/{app_name}.exe"
+locations = [
+    "desktop",
+    "start_menu",
+]
+
+[[steps]]
+kind = "register_uninstaller"
+label = "Finalizing installation..."
+
+[uninstall]
+enabled = true
+exe_name = "uninstall.exe"
+extra_remove_paths = []
+remove_install_dir = true

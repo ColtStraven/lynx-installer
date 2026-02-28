@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { saveLynxFile, pickLynxFile } from './dialogs'
 import Sidebar from './components/Sidebar'
 import AppSection from './components/sections/AppSection'
 import FilesSection from './components/sections/FilesSection'
@@ -106,11 +107,47 @@ export default function App() {
     setIsDirty(false)
   }, [])
 
-  const handleSave = useCallback(async () => {
-    if (!projectPath) return
-    await invoke('save_project', { path: projectPath, projectJson: project })
-    setIsDirty(false)
+  const handleOpen = useCallback(async () => {
+    const path = await pickLynxFile()
+    if (!path) return
+    try {
+      const loaded = await invoke<LynxProject>('load_project', { path })
+      setProject(loaded)
+      setProjectPath(path)
+      setIsDirty(false)
+    } catch (e) {
+      alert(`Failed to open project: ${e}`)
+    }
+  }, [])
+
+  const handleSave = useCallback(async (): Promise<string | null> => {
+    let path = projectPath
+    if (!path) {
+      path = await saveLynxFile(`${project.app.name.replace(/\s+/g, '-')}.lynx`)
+      if (!path) return null
+      setProjectPath(path)
+    }
+    try {
+      await invoke('save_project', { path, projectJson: project })
+      setIsDirty(false)
+      return path
+    } catch (e) {
+      alert(`Failed to save project: ${e}`)
+      return null
+    }
   }, [project, projectPath])
+
+  const handleSaveAs = useCallback(async () => {
+    const path = await saveLynxFile(`${project.app.name.replace(/\s+/g, '-')}.lynx`)
+    if (!path) return
+    try {
+      await invoke('save_project', { path, projectJson: project })
+      setProjectPath(path)
+      setIsDirty(false)
+    } catch (e) {
+      alert(`Failed to save project: ${e}`)
+    }
+  }, [project])
 
   return (
     <div className="app">
@@ -119,7 +156,9 @@ export default function App() {
         projectPath={projectPath}
         isDirty={isDirty}
         onNew={handleNew}
+        onOpen={handleOpen}
         onSave={handleSave}
+        onSaveAs={handleSaveAs}
       />
       <div className="app-body">
         <Sidebar section={section} onSection={setSection} project={project} />
@@ -128,7 +167,7 @@ export default function App() {
           {section === 'files' && <FilesSection project={project} onChange={updateProject} />}
           {section === 'steps' && <StepsSection project={project} onChange={updateProject} />}
           {section === 'theme' && <ThemeSection project={project} onChange={updateProject} />}
-          {section === 'build' && <BuildSection project={project} projectPath={projectPath} />}
+          {section === 'build' && <BuildSection project={project} projectPath={projectPath} onSave={handleSave} />}
         </main>
       </div>
     </div>

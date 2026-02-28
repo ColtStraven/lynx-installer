@@ -165,41 +165,102 @@ fn validate_project(project_json: serde_json::Value) -> serde_json::Value {
 //  Build commands
 // ─────────────────────────────────────────────
 
-/// Run the bundler to produce a .lynxpak from the project
+/// Run the full lynx-build pipeline — produces a single installer .exe
 #[tauri::command]
-async fn build_pak(
+async fn build_installer(
     app: AppHandle,
     project_path: String,
+    shell_path: String,
     output_path: String,
 ) -> Result<serde_json::Value, String> {
     let app_clone = app.clone();
 
     let result = tauri::async_runtime::spawn_blocking(move || {
-        let project_path = PathBuf::from(&project_path);
-        let output_path  = PathBuf::from(&output_path);
+        // Find lynx-build binary next to this executable
+        let current_exe = std::env::current_exe()
+            .map_err(|e| format!("Cannot find current exe: {e}"))?;
+        let exe_dir = current_exe.parent()
+            .ok_or("Cannot find exe directory")?;
 
-        let project_root = project_path
-            .parent()
-            .unwrap_or_else(|| std::path::Path::new("."))
-            .to_path_buf();
+        // Try common locations for lynx-build
+        let candidates = [
+            exe_dir.join("lynx-build.exe"),
+            exe_dir.join("lynx-build"),
+            // Dev: workspace target/debug
+            PathBuf::from("target/debug/lynx-build.exe"),
+            PathBuf::from("target/debug/lynx-build"),
+            PathBuf::from("target/release/lynx-build.exe"),
+        ];
 
-        let project = LynxProject::from_file(&project_path)
-            .map_err(|e| format!("Failed to load project: {e}"))?;
+        let lynx_build = candidates.iter()
+            .find(|p| p.exists())
+            .ok_or_else(|| "lynx-build not found. Run: cargo build -p lynx-engine --bin lynx-build".to_string())?
+            .clone();
 
-        let sender = lynx_engine::ProgressSender::new(move |event| {
-            let _ = app_clone.emit("build-progress", event.to_json());
+        let _ = app_clone.emit("build-progress", serde_json::json!({
+            "type": "info",
+            "message": format!("Using lynx-build: {}", lynx_build.display())
+        }));
+
+        // Create output directory if needed
+        if let Some(parent) = PathBuf::from(&output_path).parent() {
+            std::fs::create_dir_all(parent).ok();
+        }
+
+        // Spawn lynx-build and stream output line by line
+        let mut child = std::process::Command::new(&lynx_build)
+            .args([
+                "--project", &project_path,
+                "--shell",   &shell_path,
+                "--output",  &output_path,
+            ])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .map_err(|e| format!("Failed to spawn lynx-build: {e}"))?;
+
+        // Capture stderr in a background thread
+        let stderr_handle = child.stderr.take().map(|stderr| {
+            std::thread::spawn(move || {
+                use std::io::Read;
+                let mut buf = String::new();
+                std::io::BufReader::new(stderr).read_to_string(&mut buf).ok();
+                buf
+            })
         });
 
-        let bundler = lynx_engine::bundle::Bundler::new(&project, project_root, &sender);
+        // Stream stdout lines as progress events
+        if let Some(stdout) = child.stdout.take() {
+            use std::io::{BufRead, BufReader};
+            let reader = BufReader::new(stdout);
+            for line in reader.lines().map_while(Result::ok) {
+                let _ = app_clone.emit("build-progress", serde_json::json!({
+                    "type": "info",
+                    "message": line
+                }));
+            }
+        }
 
-        bundler.bundle(&output_path)
-            .map(|manifest| serde_json::json!({
-                "success": true,
-                "file_count": manifest.file_count,
-                "total_bytes": manifest.total_bytes,
-                "output_path": output_path.to_string_lossy(),
-            }))
-            .map_err(|e| format!("Bundle failed: {e}"))
+        let status = child.wait()
+            .map_err(|e| format!("Failed to wait for lynx-build: {e}"))?;
+
+        let stderr_output = stderr_handle
+            .and_then(|h| h.join().ok())
+            .unwrap_or_default();
+
+        if !status.success() {
+            return Err(format!("lynx-build failed:\n{}", stderr_output.trim()));
+        }
+
+        let size = std::fs::metadata(&output_path)
+            .map(|m| m.len())
+            .unwrap_or(0);
+
+        Ok(serde_json::json!({
+            "success": true,
+            "output_path": output_path,
+            "size_bytes": size,
+        }))
     })
     .await
     .map_err(|e| format!("Task failed: {e}"))?;
@@ -215,6 +276,79 @@ fn get_app_info() -> serde_json::Value {
         "engine_version": "0.1.0",
         "supported_platforms": ["windows", "macos", "linux"]
     })
+}
+
+// ─────────────────────────────────────────────
+//  Dialog commands
+// ─────────────────────────────────────────────
+
+/// Open a native file open dialog for .lynx files
+#[tauri::command]
+async fn pick_lynx_file(app: AppHandle) -> Option<String> {
+    use tauri_plugin_dialog::DialogExt;
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    let tx = std::sync::Mutex::new(Some(tx));
+    app.dialog()
+        .file()
+        .add_filter("Lynx Project", &["lynx"])
+        .pick_file(move |f| {
+            if let Some(tx) = tx.lock().unwrap().take() {
+                let _ = tx.send(f.map(|p| p.to_string()));
+            }
+        });
+    rx.await.ok().flatten()
+}
+
+/// Open a native save dialog for .lynx files
+#[tauri::command]
+async fn save_lynx_file(app: AppHandle, default_name: String) -> Option<String> {
+    use tauri_plugin_dialog::DialogExt;
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    let tx = std::sync::Mutex::new(Some(tx));
+    app.dialog()
+        .file()
+        .add_filter("Lynx Project", &["lynx"])
+        .set_file_name(&default_name)
+        .save_file(move |f| {
+            if let Some(tx) = tx.lock().unwrap().take() {
+                let _ = tx.send(f.and_then(|p| p.into_path().ok()).map(|p| p.to_string_lossy().to_string()));
+            }
+        });
+    rx.await.ok().flatten()
+}
+
+/// Open a native save dialog for the output .exe
+#[tauri::command]
+async fn save_exe_file(app: AppHandle, default_name: String) -> Option<String> {
+    use tauri_plugin_dialog::DialogExt;
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    let tx = std::sync::Mutex::new(Some(tx));
+    app.dialog()
+        .file()
+        .add_filter("Executable", &["exe"])
+        .set_file_name(&default_name)
+        .save_file(move |f| {
+            if let Some(tx) = tx.lock().unwrap().take() {
+                let _ = tx.send(f.and_then(|p| p.into_path().ok()).map(|p| p.to_string_lossy().to_string()));
+            }
+        });
+    rx.await.ok().flatten()
+}
+
+/// Open a native folder picker
+#[tauri::command]
+async fn pick_directory(app: AppHandle) -> Option<String> {
+    use tauri_plugin_dialog::DialogExt;
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    let tx = std::sync::Mutex::new(Some(tx));
+    app.dialog()
+        .file()
+        .pick_folder(move |f| {
+            if let Some(tx) = tx.lock().unwrap().take() {
+                let _ = tx.send(f.and_then(|p| p.into_path().ok()).map(|p| p.to_string_lossy().to_string()));
+            }
+        });
+    rx.await.ok().flatten()
 }
 
 // ─────────────────────────────────────────────
@@ -249,8 +383,12 @@ pub fn run() {
             load_project,
             save_project,
             validate_project,
-            build_pak,
+            build_installer,
             get_app_info,
+            pick_lynx_file,
+            save_lynx_file,
+            save_exe_file,
+            pick_directory,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Lynx Builder");
