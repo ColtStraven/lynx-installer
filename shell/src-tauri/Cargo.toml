@@ -26,9 +26,14 @@ lynx-engine = { path = "../../engine" }
 # Tauri
 tauri            = { version = "2.10.0", features = [] }
 tauri-plugin-log = "2"
+tauri-plugin-dialog = "2"
 
 # Async runtime (for install simulation + real engine later)
 tokio = { workspace = true }
 
 # Logging
 log = "0.4"
+
+[features]
+# Enabled by lynx-build when the uninstaller binary is available
+with_uninstaller = []

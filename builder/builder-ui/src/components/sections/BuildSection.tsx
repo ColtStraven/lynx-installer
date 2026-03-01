@@ -16,12 +16,30 @@ interface BuildLog {
   time: string
 }
 
+interface Stage {
+  current: number
+  total: number
+  label: string
+}
+
+const STAGE_ICONS: Record<string, string> = {
+  'Loading project':           '📂',
+  'Bundling files':            '📦',
+  'Preparing build directory': '🗂',
+  'Building frontend':         '⚙',
+  'Patching shell config':     '🔧',
+  'Building uninstaller':      '🛡',
+  'Compiling release binary':  '🔨',
+  'Copying output':            '📋',
+}
+
 export default function BuildSection({ project, projectPath, onSave }: Props) {
-  const [building, setBuilding] = useState(false)
-  const [logs, setLogs] = useState<BuildLog[]>([])
+  const [building, setBuilding]   = useState(false)
+  const [logs, setLogs]           = useState<BuildLog[]>([])
   const [outputPath, setOutputPath] = useState('')
   const [shellPath, setShellPath] = useState('')
-  const [result, setResult] = useState<null | { success: boolean; output_path?: string; size_bytes?: number; error?: string }>(null)
+  const [stage, setStage]         = useState<Stage | null>(null)
+  const [result, setResult]       = useState<null | { success: boolean; output_path?: string; size_bytes?: number; error?: string }>(null)
 
   const addLog = (type: BuildLog['type'], message: string) => {
     const time = new Date().toLocaleTimeString('en', { hour12: false })
@@ -54,8 +72,8 @@ export default function BuildSection({ project, projectPath, onSave }: Props) {
     setBuilding(true)
     setLogs([])
     setResult(null)
+    setStage(null)
 
-    // Auto-save — prompts for save path if not saved yet
     addLog('info', 'Saving project...')
     const savedPath = await onSave()
     if (!savedPath) {
@@ -74,12 +92,11 @@ export default function BuildSection({ project, projectPath, onSave }: Props) {
     const finalOutput = outputPath || (savedPath.replace(/\.lynx$/, '') + '-installer.exe')
 
     addLog('info', `Building ${project.app.name} v${project.app.version}...`)
-    addLog('info', `Output: ${finalOutput}`)
 
-    const unlisten = await listen<{ type: string; message: string }>('build-progress', event => {
-      const { type, message } = event.payload
+    const unlisten = await listen<{ type: string; message: string; stage?: Stage }>('build-progress', event => {
+      const { type, message, stage: s } = event.payload
+      if (s) setStage(s)
       addLog(type === 'error' ? 'error' : 'info', message)
-      // Auto-scroll log
       setTimeout(() => {
         const log = document.getElementById('build-log')
         if (log) log.scrollTop = log.scrollHeight
@@ -89,14 +106,14 @@ export default function BuildSection({ project, projectPath, onSave }: Props) {
     try {
       const res = await invoke<typeof result>('build_installer', {
         projectPath: savedPath,
-        shellPath: shellPath,
+        shellPath,
         outputPath: finalOutput,
       })
-
       setResult(res)
       if (res?.success) {
         const kb = ((res.size_bytes || 0) / 1024).toFixed(0)
         addLog('success', `✅ Build complete! ${kb} KB → ${res.output_path}`)
+        setStage({ current: 8, total: 8, label: 'Done' })
       }
     } catch (e: any) {
       addLog('error', `Build failed: ${e}`)
@@ -109,6 +126,7 @@ export default function BuildSection({ project, projectPath, onSave }: Props) {
 
   const errors = validate()
   const canBuild = errors.length === 0
+  const progressPct = stage ? Math.round((stage.current / stage.total) * 100) : 0
 
   return (
     <div>
@@ -155,22 +173,29 @@ export default function BuildSection({ project, projectPath, onSave }: Props) {
       <div className="card">
         <div className="card-title">Pre-build checklist</div>
         {[
-          { ok: !!project.app.name.trim(),     label: 'App name set',           fix: 'App Info section' },
-          { ok: !!project.app.version.trim(),  label: 'Version set',            fix: 'App Info section' },
-          { ok: !!project.app.id.trim(),       label: 'App ID set',             fix: 'App Info section' },
-          { ok: project.files.length > 0,      label: 'Files added',            fix: 'Files section' },
-          { ok: project.steps.length > 0,      label: 'Install steps defined',  fix: 'Steps section' },
-          { ok: !!shellPath.trim(),             label: 'Shell path set',         fix: 'Set above' },
+          { ok: !!project.app.name.trim(),     label: 'App name set',             fix: 'App Info section' },
+          { ok: !!project.app.version.trim(),  label: 'Version set',              fix: 'App Info section' },
+          { ok: !!project.app.id.trim(),       label: 'App ID set',               fix: 'App Info section' },
+          { ok: project.files.length > 0,      label: 'Files added',              fix: 'Files section' },
+          { ok: project.steps.length > 0,      label: 'Install steps defined',    fix: 'Steps section' },
+          { ok: !!shellPath.trim(),             label: 'Shell path set',           fix: 'Set above' },
+          { ok: !!project.app.icon, optional: true, label: 'App icon (optional)', fix: 'App Info section' },
         ].map((item, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-            <span style={{ color: item.ok ? 'var(--success)' : 'var(--error)', fontSize: 13, width: 16, flexShrink: 0 }}>
+            <span style={{
+              color: item.ok ? 'var(--success)'
+                   : ('optional' in item && item.optional) ? 'var(--text-dim)'
+                   : 'var(--error)',
+              fontSize: 13, width: 16, flexShrink: 0
+            }}>
               {item.ok ? '✓' : '✗'}
             </span>
             <span style={{ flex: 1, fontSize: 12, color: item.ok ? 'var(--text)' : 'var(--text-muted)' }}>{item.label}</span>
             {!item.ok && <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{item.fix}</span>}
           </div>
         ))}
-        <div style={{ marginTop: 16 }}>
+
+        <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
             className="btn btn-primary"
             onClick={handleBuild}
@@ -180,12 +205,84 @@ export default function BuildSection({ project, projectPath, onSave }: Props) {
             {building ? '⏳ Building...' : '▶ Build Installer'}
           </button>
           {!canBuild && !building && (
-            <span style={{ marginLeft: 12, fontSize: 11, color: 'var(--text-dim)' }}>
+            <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
               Fix {errors.length} issue{errors.length !== 1 ? 's' : ''} above
             </span>
           )}
         </div>
       </div>
+
+      {/* Progress bar — shown while building or after completion */}
+      {(building || stage) && (
+        <div className="card">
+          <div className="card-title" style={{ marginBottom: 12 }}>
+            {building ? 'Build progress' : result?.success ? '✅ Build complete' : '❌ Build failed'}
+          </div>
+
+          {/* Stage label */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12 }}>
+            <span style={{ color: 'var(--text)', fontWeight: 500 }}>
+              {stage ? `${STAGE_ICONS[stage.label] ?? '⚙'} ${stage.label}` : 'Starting...'}
+            </span>
+            <span style={{ color: 'var(--text-dim)' }}>
+              {stage ? `${stage.current} / ${stage.total}` : ''}
+            </span>
+          </div>
+
+          {/* Progress bar */}
+          <div style={{
+            height: 6,
+            background: 'var(--bg)',
+            borderRadius: 3,
+            overflow: 'hidden',
+            marginBottom: 14,
+          }}>
+            <div style={{
+              height: '100%',
+              width: `${progressPct}%`,
+              background: result?.success
+                ? 'var(--success)'
+                : result && !result.success
+                  ? 'var(--error)'
+                  : 'var(--accent)',
+              borderRadius: 3,
+              transition: 'width 0.4s ease',
+            }} />
+          </div>
+
+          {/* Stage steps row */}
+          <div style={{ display: 'flex', gap: 4 }}>
+            {Array.from({ length: 8 }, (_, i) => {
+              const done  = stage ? i < stage.current : false
+              const active = stage ? i === stage.current - 1 : false
+              return (
+                <div
+                  key={i}
+                  style={{
+                    flex: 1,
+                    height: 3,
+                    borderRadius: 2,
+                    background: done
+                      ? result?.success ? 'var(--success)' : 'var(--accent)'
+                      : active
+                        ? 'var(--accent)'
+                        : 'var(--border)',
+                    opacity: active ? 1 : done ? 0.7 : 0.3,
+                    transition: 'background 0.3s, opacity 0.3s',
+                  }}
+                />
+              )
+            })}
+          </div>
+
+          {/* Compiling note */}
+          {building && stage?.label === 'Compiling release binary' && (
+            <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-dim)', fontStyle: 'italic' }}>
+              ☕ Compiling Rust — this takes 2–4 minutes on first build, ~30s with cache
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Build log */}
       {logs.length > 0 && (
@@ -200,7 +297,7 @@ export default function BuildSection({ project, projectPath, onSave }: Props) {
               fontFamily: 'JetBrains Mono, monospace',
               fontSize: 11,
               lineHeight: 1.7,
-              maxHeight: 300,
+              maxHeight: 260,
               overflowY: 'auto',
             }}
           >
@@ -215,9 +312,7 @@ export default function BuildSection({ project, projectPath, onSave }: Props) {
               </div>
             ))}
             {building && (
-              <div style={{ color: 'var(--accent)', marginTop: 4 }}>
-                ⏳ building...
-              </div>
+              <div style={{ color: 'var(--accent)', marginTop: 4 }}>▌</div>
             )}
           </div>
         </div>

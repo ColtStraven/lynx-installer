@@ -7,6 +7,13 @@ use tauri::{AppHandle, Emitter, Manager};
 // In production the builder replaces this path with the real payload
 static EMBEDDED_PAK: &[u8] = include_bytes!("../../../test-payload/test.lynxpak");
 
+// Uninstaller binary — compiled by lynx-build and placed in resources/
+// include_bytes! is conditional on the with_uninstaller feature
+#[cfg(feature = "with_uninstaller")]
+static EMBEDDED_UNINSTALLER: &[u8] = include_bytes!("../resources/uninstall.exe");
+#[cfg(not(feature = "with_uninstaller"))]
+static EMBEDDED_UNINSTALLER: &[u8] = &[];
+
 // ─────────────────────────────────────────────
 //  Embedded project config
 // ─────────────────────────────────────────────
@@ -113,7 +120,8 @@ async fn start_install(app: AppHandle, install_dir: String) -> Result<(), String
         });
 
         let config = lynx_engine::RunnerConfig::new(&install_dir)
-            .with_pak_bytes(EMBEDDED_PAK.to_vec());
+            .with_pak_bytes(EMBEDDED_PAK.to_vec())
+            .with_uninstaller_bytes(EMBEDDED_UNINSTALLER.to_vec());
         let runner = lynx_engine::InstallerRunner::new(&project, config, &sender);
 
         if let Err(e) = runner.run() {
@@ -136,6 +144,7 @@ async fn start_install(app: AppHandle, install_dir: String) -> Result<(), String
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(

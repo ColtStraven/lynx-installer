@@ -230,14 +230,46 @@ async fn build_installer(
         });
 
         // Stream stdout lines as progress events
+        // Lines starting with "→ " are stage headers — emit with stage info
         if let Some(stdout) = child.stdout.take() {
             use std::io::{BufRead, BufReader};
             let reader = BufReader::new(stdout);
+
+            // Map stage messages to (index, total) for progress bar
+            let stages = [
+                "Loading project",
+                "Bundling files",
+                "Preparing build directory",
+                "Building frontend",
+                "Patching shell config",
+                "Building uninstaller",
+                "Compiling release binary",
+                "Copying output",
+            ];
+
             for line in reader.lines().map_while(Result::ok) {
-                let _ = app_clone.emit("build-progress", serde_json::json!({
+                // Detect stage lines (printed by step() as "→ message")
+                let stage_info = if let Some(msg) = line.strip_prefix("→ ") {
+                    let idx = stages.iter().position(|s| msg.starts_with(s));
+                    idx.map(|i| serde_json::json!({
+                        "current": i + 1,
+                        "total": stages.len(),
+                        "label": msg.trim_end_matches("...").trim()
+                    }))
+                } else {
+                    None
+                };
+
+                let mut event = serde_json::json!({
                     "type": "info",
                     "message": line
-                }));
+                });
+
+                if let Some(stage) = stage_info {
+                    event["stage"] = stage;
+                }
+
+                let _ = app_clone.emit("build-progress", event);
             }
         }
 

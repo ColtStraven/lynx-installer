@@ -1,29 +1,18 @@
 // main.js
 // Lynx Installer Shell — UI logic
-//
-// Handles:
-//   - Screen transitions (splash → install → complete)
-//   - Tauri command invocations
-//   - Progress event subscription + UI updates
-//   - Window controls (minimize, close)
 
-// ─────────────────────────────────────────────
-//  Tauri bridge
-//  When running in dev without Tauri, stub it out
-//  so we can develop in a normal browser too.
-// ─────────────────────────────────────────────
-
-let __invoke, __listen;
+let __invoke, __listen, __open;
 
 async function setupTauri() {
   try {
     const { invoke } = await import("@tauri-apps/api/core");
     const { listen }  = await import("@tauri-apps/api/event");
+    const { open }    = await import("@tauri-apps/plugin-dialog");
     __invoke = invoke;
     __listen = listen;
+    __open   = open;
     return true;
   } catch {
-    // Running in browser dev mode — stub everything
     console.warn("[Lynx] Tauri not available, running in browser stub mode");
     __invoke = async (cmd, args) => {
       console.log("[Lynx stub] invoke:", cmd, args);
@@ -34,15 +23,14 @@ async function setupTauri() {
           default_install_dir: "C:\\Program Files\\MyAwesomeApp"
         };
       }
-      if (cmd === "start_install") {
-        simulateProgressLocally();
-      }
+      if (cmd === "start_install") simulateProgressLocally();
       return null;
     };
     __listen = async (event, handler) => {
       window.__lynxProgressHandler = handler;
       return () => {};
     };
+    __open = async () => null; // stub — no dialog in browser
     return false;
   }
 }
@@ -140,12 +128,10 @@ function setSidebarStep(index) {
 //  Progress updates
 // ─────────────────────────────────────────────
 
-let globalFraction = 0;
 let currentStep = 0;
 const TOTAL_STEPS = 3;
 
 function onProgressEvent(event) {
-  // event.payload when coming from Tauri, event directly in stub mode
   const data = event.payload ?? event;
 
   switch (data.type) {
@@ -158,7 +144,6 @@ function onProgressEvent(event) {
     case "step_begin":
       currentStep = data.step_index;
       els.progressLabel.textContent = data.step_label;
-      // Update step chips
       els.stepChips.forEach((chip, i) => {
         chip.classList.toggle("active", i === currentStep);
         chip.classList.toggle("done",   i < currentStep);
@@ -166,7 +151,6 @@ function onProgressEvent(event) {
       break;
 
     case "file_progress": {
-      // Overall fraction = (completed steps + current step fraction) / total steps
       const overall = (currentStep + data.fraction) / TOTAL_STEPS;
       setProgress(overall, data.file_name);
       break;
@@ -208,38 +192,26 @@ function setProgress(fraction, fileName) {
 
 async function simulateProgressLocally() {
   const emit = (data) => {
-    if (window.__lynxProgressHandler) {
-      window.__lynxProgressHandler({ payload: data });
-    }
+    if (window.__lynxProgressHandler) window.__lynxProgressHandler({ payload: data });
   };
-
   const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
-  emit({ type: "started", app_name: "My Awesome App", app_version: "2.1.0", total_steps: 3 });
+  emit({ type: "started", app_name: "My Awesome App", total_steps: 3 });
   await delay(300);
 
-  const steps = ["Preparing installation...", "Installing application files...", "Creating shortcuts..."];
-
+  const steps = ["Preparing...", "Installing files...", "Creating shortcuts..."];
   for (let s = 0; s < steps.length; s++) {
     emit({ type: "step_begin", step_index: s, step_label: steps[s] });
-    const files = 15;
-    for (let f = 0; f < files; f++) {
+    for (let f = 0; f < 15; f++) {
       await delay(90);
-      emit({
-        type: "file_progress",
-        step_index: s,
-        file_name: `file_${String(f).padStart(3,"0")}.dat`,
-        fraction: (f + 1) / files,
-        bytes_written: (f + 1) * 1024 * 50,
-        bytes_total: files * 1024 * 50
-      });
+      emit({ type: "file_progress", step_index: s, file_name: `file_${f}.dat`, fraction: (f+1)/15, bytes_written: (f+1)*1024*50, bytes_total: 15*1024*50 });
     }
     emit({ type: "step_complete", step_index: s, step_label: steps[s] });
     await delay(200);
   }
 
   await delay(300);
-  emit({ type: "complete", install_dir: "C:\\Program Files\\MyAwesomeApp", duration_ms: 5000 });
+  emit({ type: "complete", install_dir: els.installDirInput.value, duration_ms: 5000 });
 }
 
 // ─────────────────────────────────────────────
@@ -249,52 +221,52 @@ async function simulateProgressLocally() {
 async function boot() {
   const hasTauri = await setupTauri();
 
-  // Load install config
   const config = await __invoke("get_install_config");
+  if (config?.error) {
+    throw new Error("Config error: " + config.error);
+  }
   if (config) applyConfig(config);
 
-  // Subscribe to progress events
+  // Make the input editable so users can type a path directly too
+  els.installDirInput.removeAttribute("readonly");
+
   await __listen("progress", onProgressEvent);
 
-  // Wire up buttons
+  // Browse button — opens native folder picker
+  els.btnBrowse.addEventListener("click", async () => {
+    const picked = await __open({ directory: true, multiple: false });
+    if (picked) {
+      els.installDirInput.value = picked;
+    }
+  });
+
   els.btnStartInstall.addEventListener("click", async () => {
-    const installDir = els.installDirInput.value;
+    const installDir = els.installDirInput.value.trim();
+    if (!installDir) return;
     await __invoke("start_install", { installDir });
   });
 
   els.btnMinimize.addEventListener("click", () => __invoke("shell_minimize"));
   els.btnClose.addEventListener("click",    () => __invoke("shell_close"));
+  els.btnFinish.addEventListener("click",   () => __invoke("shell_close"));
 
-  els.btnFinish.addEventListener("click", () => __invoke("shell_close"));
-
-  // Force a repaint so WebView2 triggers CSS animations correctly
-  document.body.offsetHeight;
-  document.querySelector(".loader-fill").style.willChange = "width";
-
-  // Tell Tauri to show the window immediately — don't wait for splash
-  // The window was hidden in tauri.conf.json to prevent white flash on load
-  if (hasTauri) __invoke("shell_ready");
-
-  // Splash → Install transition
-  // Use a reliable timeout based on the CSS animation duration (1.6s)
-  // plus padding for the fade-up animations and a beat at the end
-  const SPLASH_DURATION = 2800;
-  let transitioned = false;
-
-  function transitionToInstall() {
-    if (transitioned) return;
-    transitioned = true;
+  setTimeout(() => {
     showScreen("install");
-  }
-
-  // Primary: fire off the CSS animation end
-  const loaderFill = document.querySelector(".loader-fill");
-  loaderFill.addEventListener("animationend", () => {
-    setTimeout(transitionToInstall, 500);
-  });
-
-  // Fallback: hard timeout in case animationend doesn't fire
-  setTimeout(transitionToInstall, SPLASH_DURATION);
+    if (hasTauri) __invoke("shell_ready");
+  }, 2200);
 }
 
-boot();
+async function safeboot() {
+  try {
+    await boot();
+  } catch (err) {
+    const loaderText = document.querySelector(".loader-text");
+    if (loaderText) {
+      loaderText.textContent = "Error: " + (err?.message ?? String(err));
+      loaderText.style.color = "#ff5050";
+    }
+    try { await __invoke?.("shell_ready"); } catch {}
+  }
+}
+
+safeboot();

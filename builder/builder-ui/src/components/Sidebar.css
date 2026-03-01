@@ -175,3 +175,13 @@
 .sidebar-v {
   font-family: 'JetBrains Mono', monospace;
 }
+
+.nav-error-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--error, #ff5c5c);
+  flex-shrink: 0;
+  margin-left: 2px;
+  box-shadow: 0 0 4px var(--error, #ff5c5c);
+}

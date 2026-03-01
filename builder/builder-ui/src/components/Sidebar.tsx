@@ -15,10 +15,24 @@ const NAV: { id: Section; label: string; icon: string; desc: string }[] = [
   { id: 'build', label: 'Build',     icon: '▶', desc: 'Package & export' },
 ]
 
+function appInfoValid(app: LynxProject['app']): boolean {
+  if (!app.name.trim() || app.name.trim().length < 2) return false
+  if (!app.version.trim() || !/^\d+\.\d+(\.\d+)?$/.test(app.version.trim())) return false
+  if (!app.id.trim() || !/^[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*){1,}$/.test(app.id.trim())) return false
+  if (!app.default_install_dir.trim()) return false
+  return true
+}
+
 export default function Sidebar({ section, onSection, project }: Props) {
-  const fileCount = project.files.length
-  const stepCount = project.steps.length
-  const hasName   = project.app.name.trim().length > 0
+  const fileCount  = project.files.length
+  const stepCount  = project.steps.length
+  const appValid   = appInfoValid(project.app)
+
+  const sectionErrors: Partial<Record<Section, boolean>> = {
+    app:   !appValid,
+    files: fileCount === 0,
+    steps: stepCount === 0,
+  }
 
   return (
     <aside className="sidebar">
@@ -53,15 +67,18 @@ export default function Sidebar({ section, onSection, project }: Props) {
             {item.id === 'steps' && stepCount > 0 && (
               <span className="nav-badge">{stepCount}</span>
             )}
+            {sectionErrors[item.id] && (
+              <span className="nav-error-dot" title="Needs attention" />
+            )}
           </button>
         ))}
       </nav>
 
       <div className="sidebar-status">
         <div className="status-row">
-          <span className={`status-dot ${hasName ? 'ok' : 'warn'}`} />
+          <span className={`status-dot ${appValid ? 'ok' : 'warn'}`} />
           <span>App info</span>
-          <span className="status-val">{hasName ? 'ready' : 'incomplete'}</span>
+          <span className="status-val">{appValid ? 'ready' : 'incomplete'}</span>
         </div>
         <div className="status-row">
           <span className={`status-dot ${fileCount > 0 ? 'ok' : 'warn'}`} />
